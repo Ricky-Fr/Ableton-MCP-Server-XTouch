@@ -21,5 +21,3 @@ Why do all this?
 Honestly… I still don’t know. Just exploring, experimenting, and seeing how far this AI + Ableton + hardware hybrid can go.
 
 ---
-
-Si tu veux une version encore plus punchy, plus “GitHub‑ready”, ou plus orientée dev, je peux t’en préparer une autre.
