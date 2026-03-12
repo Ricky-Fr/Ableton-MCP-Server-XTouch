@@ -1,1 +1,14 @@
+---
 
+# 🚧 MCP Server — Work in Progress
+
+## 📦 Version **1.3** (in progress)
+
+### ✨ New Features & Improvements
+- 📌 **Added versioning**
+- 🛑 **Server now automatically stops** when Ableton is not running or has been closed
+- 🎛️ **Clip creation in Arrangement View**
+- 🔧 **Access to plugin parameters**
+- 🐞 **Minor bug fixes**
+
+---
