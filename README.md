@@ -16,8 +16,6 @@ The idea is to extend uisato’s script by adding:
 - while preserving the existing socket‑based communication.
 
 The final step will be adapting the server so it can communicate directly with the **XTouch Mini**.
-
-Why do all this?  
-Honestly… I still don’t know. Just exploring, experimenting, and seeing how far this AI + Ableton + hardware hybrid can go.
+Honestly… I still don’t know where i am going. Just exploring, experimenting, and seeing how far this AI + Ableton + hardware hybrid can go.
 
 ---
