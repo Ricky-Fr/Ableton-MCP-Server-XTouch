@@ -3,7 +3,7 @@ Advanced MCP Server for Ableton x Ableton OSC  x XTouch
 
 ---
 
-## 🚀 Project Pitch (English Version)
+## 🚀 Project Pitch
 
 A new project designed to connect **Anthropic’s Claude AI** to **Ableton Live**, with the long‑term goal of integrating it seamlessly with my **Behringer XTouch Mini** control surface.  
 The system builds on two solid foundations:  
