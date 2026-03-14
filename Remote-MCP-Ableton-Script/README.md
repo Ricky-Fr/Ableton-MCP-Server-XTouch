@@ -4,7 +4,7 @@
 
 This Remote Script provides a communication bridge between **Ableton Live** and the **MCP Server**, enabling extended control surface features, advanced parameter access, and deeper integration with external hardware such as the **X-Touch Mini / X-Touch**.
 
-## 🚀 Version Overview
+## 🚀 Version Overview 1.7 (stable)
 
 This version of the Remote Script introduces improved stability, cleaner communication with the MCP Server, and expanded feature support.
 
