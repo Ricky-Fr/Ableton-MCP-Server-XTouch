@@ -9,7 +9,7 @@ A new project designed to connect **Anthropic’s Claude AI** to **Ableton Live*
 The system builds on solid foundations:  
 - **uisato / MCP Server for Ableton**
 
-**Please, for my server installation, see his repository. I will do a complete manual later**
+**Please, for my server installation, see uisato repository. I will do a complete manual later**
 
 For now, my MCP server runs independently with CLAUDE AI. The XTouch part will only be considered later and will remain optional.
 
