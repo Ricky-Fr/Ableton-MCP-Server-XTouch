@@ -33,4 +33,7 @@ By combining tactile control, deep session access through MCP, and the creative 
 This is more than a controller setup.  
 It’s the beginning of a **smart, responsive, AI‑augmented instrument** — and the possibilities are enormous.
 
+
+![Demo](https://github.com/Ricky-Fr/Ableton-MCP-Server-XTouch/blob/main/demo-1.png?raw=true)
+
 ---
