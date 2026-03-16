@@ -11,6 +11,24 @@ The system builds on solid foundations:
 
 **Please, for my server installation, see uisato repository. I will do a complete manual later**
 
+---
+
+With an **MPC server**, you can query and control Ableton Live using artificial intelligence.  
+Just speak naturally, and the system will create or modify your session for you.
+
+For example, you can say:
+
+> **“Create a guitar track with two bars of MIDI notes in the style of Radiohead’s *Creep*, add a long reverb, and load the Nylon Guitar instrument.”**
+
+The server will automatically:
+- create the track,  
+- generate the MIDI,  
+- load the instrument,  
+- apply the effects,  
+- and configure everything instantly.
+
+---
+
 For now, my MCP server runs independently with CLAUDE AI. The XTouch part will only be considered later and will remain optional.
 
 The idea is to extend uisato’s script by adding:  
@@ -21,7 +39,6 @@ The idea is to extend uisato’s script by adding:
 The final step will be adapting the server so it can communicate directly with the **XTouch Mini**.
 Honestly… I still don’t know where i am going. Just exploring, experimenting, and seeing how far this AI + Ableton + hardware hybrid can go.
 
----
 
 ## 🚀 A New Hybrid Instrument: X‑Touch Mini × MCP Server × AI × Ableton Live
 
