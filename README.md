@@ -1,5 +1,5 @@
 # Ableton-MCP-Server-XTouch
-Advanced MCP Server for Ableton x XTouch
+Advanced MCP Server for Ableton x XTouch with CLAUDE AI DESKTOP
 
 ---
 
