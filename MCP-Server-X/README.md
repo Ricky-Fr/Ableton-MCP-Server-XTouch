@@ -26,7 +26,7 @@ Designed for AI agents, control surfaces, and advanced automation workflows.
 - Stable versioning system
 - Precise dB curves for volume & sends
 - Adds full key transposition, allowing you to shift any key to another—including modal transformations such as Dorian, Mixolydian, Lydian, and more—applied either to a single track or to the entire song.
-- Many bug fixes and reliability improvements
+- Some bug fixes and reliability improvements
 
 ---
 
