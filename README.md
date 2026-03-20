@@ -19,6 +19,8 @@ Just speak naturally, and the system will create or modify your session for you.
 For example, you can say:
 
 > **“Create a guitar track with two bars of MIDI notes in the style of Radiohead’s *Creep*, add a long reverb, and load the Nylon Guitar instrument.”**
+> 
+> **“Change the song’s key to E Dorian for all MIDI tracks, excluding any tracks containing a Drum Rack.”**
 
 The server will automatically:
 - create the track,  
