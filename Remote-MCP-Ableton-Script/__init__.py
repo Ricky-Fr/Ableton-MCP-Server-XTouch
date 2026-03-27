@@ -224,6 +224,8 @@ class AbletonMCP(ControlSurface):
             # Route the command to the appropriate handler
             if command_type == "get_session_info":
                 response["result"] = self._get_session_info()
+            elif command_type == "get_view_mode":
+                response["result"] = self._get_view_mode()
             elif command_type == "get_track_info":
                 track_index = params.get("track_index", 0)
                 response["result"] = self._get_track_info(track_index)
@@ -237,7 +239,8 @@ class AbletonMCP(ControlSurface):
                                  "set_track_volume", "set_track_pan", "set_track_send",
                                  "set_track_mute", "set_track_solo", "set_track_arm",
                                  "set_groove_amount", "apply_groove", "apply_groove_arrangement",
-                                 "get_notes_arrangement", "replace_notes_arrangement"]:
+                                 "get_notes_arrangement", "replace_notes_arrangement",
+                                 "get_notes_clip", "replace_notes_clip"]:
                 # Use a thread-safe approach with a response queue
                 response_queue = queue.Queue()
                 
@@ -357,6 +360,15 @@ class AbletonMCP(ControlSurface):
                             position = params.get("position", 0.0)
                             notes = params.get("notes", [])
                             result = self._replace_notes_arrangement(track_index, position, notes)
+                        elif command_type == "get_notes_clip":
+                            track_index = params.get("track_index", 0)
+                            clip_index = params.get("clip_index", 0)
+                            result = self._get_notes_clip(track_index, clip_index)
+                        elif command_type == "replace_notes_clip":
+                            track_index = params.get("track_index", 0)
+                            clip_index = params.get("clip_index", 0)
+                            notes = params.get("notes", [])
+                            result = self._replace_notes_clip(track_index, clip_index, notes)
                         
                         # Put the result in the queue
                         response_queue.put({"status": "success", "result": result})
@@ -453,6 +465,43 @@ class AbletonMCP(ControlSurface):
             elif command_type == "set_song_scale":
                 scale_name = params.get("scale_name", "major")
                 response["result"] = self._set_song_scale(scale_name)
+            elif command_type == "get_selected_track":
+                response["result"] = self._get_selected_track()
+            elif command_type == "get_selected_device":
+                response["result"] = self._get_selected_device()
+            elif command_type == "get_rack_chains":
+                track_index = params.get("track_index", 0)
+                device_index = params.get("device_index", 0)
+                response["result"] = self._get_rack_chains(track_index, device_index)
+            elif command_type == "get_rack_chain_device_parameters":
+                track_index = params.get("track_index", 0)
+                device_index = params.get("device_index", 0)
+                chain_index = params.get("chain_index", 0)
+                chain_device_index = params.get("chain_device_index", 0)
+                response["result"] = self._get_rack_chain_device_parameters(
+                    track_index, device_index, chain_index, chain_device_index)
+            elif command_type == "set_rack_chain_device_parameter":
+                track_index = params.get("track_index", 0)
+                device_index = params.get("device_index", 0)
+                chain_index = params.get("chain_index", 0)
+                chain_device_index = params.get("chain_device_index", 0)
+                parameter_index = params.get("parameter_index", 0)
+                value = params.get("value", 0.0)
+                response["result"] = self._set_rack_chain_device_parameter(
+                    track_index, device_index, chain_index, chain_device_index, parameter_index, value)
+            elif command_type == "set_rack_chain_device_parameters":
+                track_index = params.get("track_index", 0)
+                device_index = params.get("device_index", 0)
+                chain_index = params.get("chain_index", 0)
+                chain_device_index = params.get("chain_device_index", 0)
+                parameters = params.get("parameters", [])
+                response["result"] = self._set_rack_chain_device_parameters(
+                    track_index, device_index, chain_index, chain_device_index, parameters)
+            elif command_type == "get_swing_amount":
+                response["result"] = self._get_swing_amount()
+            elif command_type == "set_swing_amount":
+                value = params.get("value", 0.0)
+                response["result"] = self._set_swing_amount(value)
             else:
                 response["status"] = "error"
                 response["message"] = "Unknown command: " + command_type
@@ -486,6 +535,27 @@ class AbletonMCP(ControlSurface):
             self.log_message("Error getting session info: " + str(e))
             raise
     
+    def _get_view_mode(self):
+        """Retourne la vue actuellement affichée : Session ou Arrangement."""
+        try:
+            app_view = self.application().view
+            is_session   = app_view.is_view_visible("Session")
+            is_arranger  = app_view.is_view_visible("Arranger")
+            if is_session:
+                mode = "Session"
+            elif is_arranger:
+                mode = "Arrangement"
+            else:
+                mode = "Other"
+            return {
+                "view_mode":    mode,
+                "is_session":   is_session,
+                "is_arranger":  is_arranger
+            }
+        except Exception as e:
+            self.log_message("Error getting view mode: " + str(e))
+            raise
+
     def _get_track_info(self, track_index):
         """Get information about a track"""
         try:
@@ -1315,7 +1385,8 @@ class AbletonMCP(ControlSurface):
                 'full_refresh_has_listener', 'hotswap_target', 'hotswap_target_has_listener',
                 'load_item', 'preview_item', 'relation_to_hotswap_target',
                 'remove_filter_type_listener', 'remove_full_refresh_listener',
-                'remove_hotswap_target_listener', 'stop_preview'
+                'remove_hotswap_target_listener', 'stop_preview',
+                'legacy_libraries',  # deprecated since Live 10, always returns empty list
             ])
 
             plugin_keywords = ['vst', 'plugin', 'au ', 'audio unit', 'plug-in']
@@ -1479,8 +1550,12 @@ class AbletonMCP(ControlSurface):
                     self.log_message("Error processing midi_effects: {0}".format(str(e)))
             
             # Try to process other potentially available categories
+            SKIP_BROWSER_ATTRS = {
+                'instruments', 'sounds', 'drums', 'audio_effects', 'midi_effects',
+                'legacy_libraries',  # deprecated since Live 10, always returns empty list
+            }
             for attr in browser_attrs:
-                if attr not in ['instruments', 'sounds', 'drums', 'audio_effects', 'midi_effects'] and \
+                if attr not in SKIP_BROWSER_ATTRS and \
                    (category_type == "all" or category_type == attr):
                     try:
                         item = getattr(app.browser, attr)
@@ -1794,6 +1869,81 @@ class AbletonMCP(ControlSurface):
             "note_count": len(new_notes)
         }
 
+    def _get_notes_clip(self, track_index, clip_index):
+        """Lit toutes les notes MIDI d'un clip Session View."""
+        self._song = self.song()
+        if track_index < 0 or track_index >= len(self._song.tracks):
+            raise IndexError("Track index out of range: {0}".format(track_index))
+        track = self._song.tracks[track_index]
+        if clip_index < 0 or clip_index >= len(track.clip_slots):
+            raise IndexError("Clip index out of range: {0}".format(clip_index))
+        slot = track.clip_slots[clip_index]
+        if not slot.has_clip:
+            raise RuntimeError("No clip found at slot {0} on track {1}".format(clip_index, track_index))
+        clip = slot.clip
+        if not clip.is_midi_clip:
+            raise RuntimeError("Clip at slot {0} is not a MIDI clip".format(clip_index))
+        raw_notes = clip.get_notes(0, 0, clip.length, 128)
+        notes = [
+            {
+                "pitch":      int(n[0]),
+                "start_time": float(n[1]),
+                "duration":   float(n[2]),
+                "velocity":   int(n[3]),
+                "mute":       bool(n[4])
+            }
+            for n in raw_notes
+        ]
+        return {
+            "track_index": track_index,
+            "clip_index":  clip_index,
+            "clip_length": clip.length,
+            "note_count":  len(notes),
+            "notes":       notes
+        }
+
+    def _replace_notes_clip(self, track_index, clip_index, notes):
+        """
+        Remplace toutes les notes MIDI d'un clip Session View sans toucher
+        aux enveloppes d'automation ni au groove.
+        Calque exact de _replace_notes_arrangement pour la Session View.
+        """
+        self._song = self.song()
+        if track_index < 0 or track_index >= len(self._song.tracks):
+            raise IndexError("Track index out of range: {0}".format(track_index))
+        track = self._song.tracks[track_index]
+        if clip_index < 0 or clip_index >= len(track.clip_slots):
+            raise IndexError("Clip index out of range: {0}".format(clip_index))
+        slot = track.clip_slots[clip_index]
+        if not slot.has_clip:
+            raise RuntimeError("No clip found at slot {0} on track {1}".format(clip_index, track_index))
+        clip = slot.clip
+        if not clip.is_midi_clip:
+            raise RuntimeError("Clip at slot {0} is not a MIDI clip".format(clip_index))
+
+        # Supprimer toutes les notes existantes (API Live 11+)
+        clip.remove_notes_extended(from_time=0, from_pitch=0, time_span=clip.length + 1, pitch_span=128)
+
+        # Ecrire les nouvelles notes (API Live 11+)
+        new_notes = tuple(
+            Live.Clip.MidiNoteSpecification(
+                pitch=int(n.get("pitch", 60)),
+                start_time=float(n.get("start_time", 0.0)),
+                duration=float(n.get("duration", 0.25)),
+                velocity=int(n.get("velocity", 100)),
+                mute=bool(n.get("mute", False))
+            )
+            for n in notes
+        )
+        clip.add_new_notes(new_notes)
+
+        return {
+            "replaced":    True,
+            "track_index": track_index,
+            "clip_index":  clip_index,
+            "note_count":  len(new_notes)
+        }
+
     # -------------------------------------------------------------------------
     #  Automation helpers
     # -------------------------------------------------------------------------
@@ -2000,6 +2150,192 @@ class AbletonMCP(ControlSurface):
             "points_written": len(points),
             "param_name":     param.name
         }
+
+    # -------------------------------------------------------------------------
+    #  Rack chain helpers
+    # -------------------------------------------------------------------------
+
+    def _get_rack_chains(self, track_index, device_index):
+        """List all chains and their devices inside a rack device."""
+        try:
+            track = self._song.tracks[track_index]
+            rack = track.devices[device_index]
+            if not hasattr(rack, 'chains'):
+                raise TypeError("Device at index {0} is not a rack".format(device_index))
+            chains = []
+            for chain_index, chain in enumerate(rack.chains):
+                devices = []
+                for dev_index, dev in enumerate(chain.devices):
+                    devices.append({
+                        "index": dev_index,
+                        "name": dev.name,
+                        "type": str(dev.type),
+                        "parameter_count": len(dev.parameters)
+                    })
+                chains.append({
+                    "index": chain_index,
+                    "name": chain.name,
+                    "devices": devices
+                })
+            return {
+                "track_index": track_index,
+                "device_index": device_index,
+                "rack_name": rack.name,
+                "chains": chains
+            }
+        except Exception as e:
+            self.log_message("Error getting rack chains: " + str(e))
+            raise
+
+    def _get_rack_chain_device_parameters(self, track_index, device_index, chain_index, chain_device_index):
+        """Get all parameters of a device nested inside a rack chain."""
+        try:
+            track = self._song.tracks[track_index]
+            rack = track.devices[device_index]
+            if not hasattr(rack, 'chains'):
+                raise TypeError("Device at index {0} is not a rack".format(device_index))
+            chain = rack.chains[chain_index]
+            device = chain.devices[chain_device_index]
+            parameters = []
+            for param_index, param in enumerate(device.parameters):
+                parameters.append({
+                    "index": param_index,
+                    "name": param.name,
+                    "value": param.value,
+                    "min": param.min,
+                    "max": param.max,
+                    "is_quantized": param.is_quantized,
+                    "value_items": list(param.value_items) if param.is_quantized else []
+                })
+            return {
+                "track_index": track_index,
+                "device_index": device_index,
+                "chain_index": chain_index,
+                "chain_device_index": chain_device_index,
+                "device_name": device.name,
+                "parameters": parameters
+            }
+        except Exception as e:
+            self.log_message("Error getting rack chain device parameters: " + str(e))
+            raise
+
+    def _set_rack_chain_device_parameter(self, track_index, device_index, chain_index, chain_device_index, parameter_index, value):
+        """Set a single parameter on a device nested inside a rack chain."""
+        try:
+            track = self._song.tracks[track_index]
+            rack = track.devices[device_index]
+            if not hasattr(rack, 'chains'):
+                raise TypeError("Device at index {0} is not a rack".format(device_index))
+            chain = rack.chains[chain_index]
+            device = chain.devices[chain_device_index]
+            param = device.parameters[parameter_index]
+            clamped = max(param.min, min(param.max, float(value)))
+            param.value = clamped
+            return {
+                "track_index": track_index,
+                "device_index": device_index,
+                "chain_index": chain_index,
+                "chain_device_index": chain_device_index,
+                "parameter_index": parameter_index,
+                "parameter_name": param.name,
+                "value": param.value
+            }
+        except Exception as e:
+            self.log_message("Error setting rack chain device parameter: " + str(e))
+            raise
+
+    def _set_rack_chain_device_parameters(self, track_index, device_index, chain_index, chain_device_index, parameters):
+        """Set multiple parameters at once on a device nested inside a rack chain."""
+        try:
+            track = self._song.tracks[track_index]
+            rack = track.devices[device_index]
+            if not hasattr(rack, 'chains'):
+                raise TypeError("Device at index {0} is not a rack".format(device_index))
+            chain = rack.chains[chain_index]
+            device = chain.devices[chain_device_index]
+            results = []
+            for item in parameters:
+                param_index = int(item.get("parameter_index", 0))
+                value = float(item.get("value", 0.0))
+                param = device.parameters[param_index]
+                clamped = max(param.min, min(param.max, value))
+                param.value = clamped
+                results.append({
+                    "parameter_index": param_index,
+                    "parameter_name": param.name,
+                    "value": param.value
+                })
+            return {
+                "track_index": track_index,
+                "device_index": device_index,
+                "chain_index": chain_index,
+                "chain_device_index": chain_device_index,
+                "device_name": device.name,
+                "parameters_set": results
+            }
+        except Exception as e:
+            self.log_message("Error setting rack chain device parameters: " + str(e))
+            raise
+
+    # -------------------------------------------------------------------------
+    #  Selected track / device helpers
+    # -------------------------------------------------------------------------
+
+    def _get_selected_track(self):
+        """Return the index and name of the currently selected track."""
+        try:
+            selected = self._song.view.selected_track
+            tracks = list(self._song.tracks)
+            if selected in tracks:
+                index = tracks.index(selected)
+                return {"track_index": index, "name": selected.name}
+            return_tracks = list(self._song.return_tracks)
+            if selected in return_tracks:
+                return {"track_index": -1, "name": selected.name, "is_return": True}
+            return {"track_index": -1, "name": "Master", "is_master": True}
+        except Exception as e:
+            self.log_message("Error getting selected track: " + str(e))
+            return {"error": str(e)}
+
+    def _get_selected_device(self):
+        """Return the index and name of the currently selected device on the selected track."""
+        try:
+            selected_track = self._song.view.selected_track
+            selected_device = selected_track.view.selected_device
+            if selected_device is None:
+                return {"device_index": None, "name": None}
+            devices = list(selected_track.devices)
+            if selected_device in devices:
+                index = devices.index(selected_device)
+                return {"device_index": index, "name": selected_device.name,
+                        "track_index": list(self._song.tracks).index(selected_track)
+                        if selected_track in list(self._song.tracks) else -1}
+            return {"device_index": None, "name": selected_device.name,
+                    "note": "device in rack chain"}
+        except Exception as e:
+            self.log_message("Error getting selected device: " + str(e))
+            return {"error": str(e)}
+
+    def _get_swing_amount(self):
+        """Get the global swing amount"""
+        try:
+            swing = self._song.swing_amount if hasattr(self._song, 'swing_amount') else 0.0
+            return {"swing_amount": swing}
+        except Exception as e:
+            self.log_message("Error getting swing amount: " + str(e))
+            return {"error": str(e)}
+
+    def _set_swing_amount(self, value):
+        """Set the global swing amount (0.0 to 1.0)"""
+        try:
+            if not hasattr(self._song, 'swing_amount'):
+                return {"error": "swing_amount not available on this Live version"}
+            clamped = max(0.0, min(1.0, float(value)))
+            self._song.swing_amount = clamped
+            return {"swing_amount": self._song.swing_amount}
+        except Exception as e:
+            self.log_message("Error setting swing amount: " + str(e))
+            return {"error": str(e)}
 
     # -------------------------------------------------------------------------
     #  Song key / scale helpers
