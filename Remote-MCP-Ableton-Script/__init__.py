@@ -18,7 +18,7 @@ except ImportError:
 # Constants for socket communication
 DEFAULT_PORT = 9877
 HOST = "localhost"
-REMOTE_VERSION = "2.2"
+REMOTE_VERSION = "2.3"
 
 def create_instance(c_instance):
     """Create and return the AbletonMCP script instance"""
