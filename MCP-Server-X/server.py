@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("AbletonMCPServer")
 
-SERVER_VERSION = "2.2"
+SERVER_VERSION = "2.3"
 print(f"==========================================")
 print(f"  AbletonMCP Server - Version {SERVER_VERSION}")
 print(f"==========================================")
@@ -120,7 +120,14 @@ class AbletonConnection:
             "set_arrangement_clip_name", "get_arrangement_clips",
             "set_track_volume", "set_track_pan", "set_track_send",
             "set_clip_envelope_point", "clear_clip_envelope", "set_arrangement_envelope",
-            "replace_notes_arrangement"
+            "replace_notes_arrangement",
+            "get_notes_clip", "replace_notes_clip", "get_view_mode"
+        ]
+
+        # Commandes lentes (browser) : timeout étendu à 30s
+        is_slow_command = command_type in [
+            "search_browser", "get_browser_tree", "get_browser_items_at_path",
+            "load_browser_item"
         ]
         
         try:
@@ -136,7 +143,7 @@ class AbletonConnection:
                 time.sleep(0.1)  # 100ms delay
             
             # Set timeout based on command type
-            timeout = 15.0 if is_modifying_command else 10.0
+            timeout = 30.0 if is_slow_command else (15.0 if is_modifying_command else 10.0)
             self.sock.settimeout(timeout)
             
             # Receive the response
@@ -1414,6 +1421,238 @@ def set_song_scale(ctx: Context, scale_name: str) -> str:
         return f"Scale set to {result.get('scale_name')}"
     except Exception as e:
         return f"Error setting scale: {str(e)}"
+
+
+@mcp.tool()
+def get_view_mode(ctx: Context) -> str:
+    """
+    Return the currently visible view in Ableton: Session or Arrangement.
+    Always call this before any clip operation to route to the correct mode.
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_view_mode")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting view mode: {str(e)}")
+        return f"Error getting view mode: {str(e)}"
+
+
+@mcp.tool()
+def get_notes_clip(ctx: Context, track_index: int, clip_index: int) -> str:
+    """
+    Read all MIDI notes from a Session View clip.
+
+    Parameters:
+    - track_index: Index of the track (0-based)
+    - clip_index:  Index of the clip slot (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_notes_clip", {
+            "track_index": track_index,
+            "clip_index":  clip_index
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting notes from clip: {str(e)}")
+        return f"Error getting notes from clip: {str(e)}"
+
+
+@mcp.tool()
+def replace_notes_clip(
+    ctx: Context,
+    track_index: int,
+    clip_index: int,
+    notes: List[Dict[str, Any]]
+) -> str:
+    """
+    Replace all MIDI notes in a Session View clip, preserving automation and groove.
+    Clears existing notes then writes the new ones in a single operation.
+
+    Parameters:
+    - track_index: Index of the track (0-based)
+    - clip_index:  Index of the clip slot (0-based)
+    - notes:       List of note dicts with pitch, start_time, duration, velocity, mute
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("replace_notes_clip", {
+            "track_index": track_index,
+            "clip_index":  clip_index,
+            "notes":       notes
+        })
+        return (
+            f"Replaced notes in clip at track {track_index}, slot {clip_index}: "
+            f"{result.get('note_count', 0)} note(s) written."
+        )
+    except Exception as e:
+        logger.error(f"Error replacing notes in clip: {str(e)}")
+        return f"Error replacing notes in clip: {str(e)}"
+
+
+@mcp.tool()
+def get_selected_track(ctx: Context) -> str:
+    """
+    Return the index and name of the currently selected track in Ableton.
+    Useful to avoid hardcoding track indices when the user has already selected the target.
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_selected_track")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting selected track: {str(e)}")
+        return f"Error getting selected track: {str(e)}"
+
+
+@mcp.tool()
+def get_selected_device(ctx: Context) -> str:
+    """
+    Return the index and name of the currently selected device on the selected track.
+    Also returns the track_index so it can be used directly with other tools.
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_selected_device")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting selected device: {str(e)}")
+        return f"Error getting selected device: {str(e)}"
+
+@mcp.tool()
+def get_rack_chains(ctx: Context, track_index: int, device_index: int) -> str:
+    """
+    Get chains and devices inside a rack device (Instrument Rack, Audio Effect Rack, etc.).
+    Returns all chains with their devices and parameters.
+
+    Parameters:
+    - track_index: The index of the track
+    - device_index: The index of the rack device on the track
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_rack_chains", {
+            "track_index": track_index,
+            "device_index": device_index
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting rack chains: {str(e)}")
+        return f"Error getting rack chains: {str(e)}"
+
+
+@mcp.tool()
+def get_rack_chain_device_parameters(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    chain_index: int,
+    chain_device_index: int
+) -> str:
+    """
+    Get all parameters of a plugin/device nested inside a rack chain.
+    Use this when a plugin has more than 16 parameters — wrap it in a rack
+    and use this tool to access all of its parameters.
+
+    Parameters:
+    - track_index:        Index of the track (0-based)
+    - device_index:       Index of the rack on the track (0-based)
+    - chain_index:        Index of the chain inside the rack (0-based)
+    - chain_device_index: Index of the device inside that chain (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_rack_chain_device_parameters", {
+            "track_index": track_index,
+            "device_index": device_index,
+            "chain_index": chain_index,
+            "chain_device_index": chain_device_index
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting rack chain device parameters: {str(e)}")
+        return f"Error getting rack chain device parameters: {str(e)}"
+
+
+@mcp.tool()
+def set_rack_chain_device_parameter(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    chain_index: int,
+    chain_device_index: int,
+    parameter_index: int,
+    value: float
+) -> str:
+    """
+    Set a parameter on a plugin/device nested inside a rack chain.
+    Use this when a plugin has more than 16 parameters — wrap it in a rack
+    and use this tool to modify any of its parameters.
+
+    Parameters:
+    - track_index:        Index of the track (0-based)
+    - device_index:       Index of the rack on the track (0-based)
+    - chain_index:        Index of the chain inside the rack (0-based)
+    - chain_device_index: Index of the device inside that chain (0-based)
+    - parameter_index:    Index of the parameter to set (0-based)
+    - value:              New value (clamped to the parameter's min/max automatically)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_rack_chain_device_parameter", {
+            "track_index": track_index,
+            "device_index": device_index,
+            "chain_index": chain_index,
+            "chain_device_index": chain_device_index,
+            "parameter_index": parameter_index,
+            "value": value
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting rack chain device parameter: {str(e)}")
+        return f"Error setting rack chain device parameter: {str(e)}"
+
+
+@mcp.tool()
+def set_rack_chain_device_parameters(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    chain_index: int,
+    chain_device_index: int,
+    parameters: List[Dict[str, Any]]
+) -> str:
+    """
+    Set multiple parameters at once on a plugin/device nested inside a rack chain.
+    More efficient than calling set_rack_chain_device_parameter repeatedly.
+
+    Parameters:
+    - track_index:        Index of the track (0-based)
+    - device_index:       Index of the rack on the track (0-based)
+    - chain_index:        Index of the chain inside the rack (0-based)
+    - chain_device_index: Index of the device inside that chain (0-based)
+    - parameters:         List of {parameter_index: int, value: float} dicts
+
+    Example:
+      parameters = [
+        {"parameter_index": 3, "value": 0.75},
+        {"parameter_index": 7, "value": 0.5}
+      ]
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_rack_chain_device_parameters", {
+            "track_index": track_index,
+            "device_index": device_index,
+            "chain_index": chain_index,
+            "chain_device_index": chain_device_index,
+            "parameters": parameters
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting rack chain device parameters: {str(e)}")
+        return f"Error setting rack chain device parameters: {str(e)}"
 
 
 # Main execution
