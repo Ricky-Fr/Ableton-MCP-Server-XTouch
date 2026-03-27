@@ -2,8 +2,9 @@
 
 ---
 
-# 🚀 MCP Server for Ableton Live  
-**Version 2.2 — Stable (Work in Progress)**
+# 🚀 MCP Server for Ableton Live 
+**Version 2.3 — Stable (Work in Progress)**
+- Add device rack exploration : more than 16 macros availables in intrument rack. AI can reach them in grouped R/W
 
 A lightweight, fast, and fully scriptable **MCP server** for Ableton Live.  
 It exposes a complete set of tools (44 total) to control Live: session, tracks, clips, devices, browser, groove, automation, and more.
@@ -30,7 +31,7 @@ Designed for AI agents, control surfaces, and advanced automation workflows.
 
 ---
 
-# 🧰 Available Tools (44 total)
+# 🧰 Available Tools (44 total in v2.2)
 
 Below is the complete list of tools exposed by the MCP server.
 
