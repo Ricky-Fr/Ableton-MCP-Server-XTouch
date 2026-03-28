@@ -1,13 +1,8 @@
-
-
----
-
-# 🚀 MCP Server for Ableton Live 
-**Version 2.3 — Stable (Work in Progress)**
-- Add device rack exploration : more than 16 macros availables in intrument rack. AI can reach them in grouped R/W
+# 🚀 MCP Server for Ableton Live  
+**Version 2.3 — Stable**
 
 A lightweight, fast, and fully scriptable **MCP server** for Ableton Live.  
-It exposes a complete set of tools (44 total) to control Live: session, tracks, clips, devices, browser, groove, automation, and more.
+It exposes a complete set of tools to control Live: session, tracks, clips, devices, browser, groove, automation, and more.
 
 Designed for AI agents, control surfaces, and advanced automation workflows.
 
@@ -23,15 +18,16 @@ Designed for AI agents, control surfaces, and advanced automation workflows.
 - Browser search (instruments, effects, presets, VST2/VST3/AU)
 - Automation writing (Session & Arrangement)
 - Groove Pool integration
+- Key & scale reading and transformation
+- Modal transposition (Dorian, Mixolydian, Lydian…)
 - Auto‑shutdown when Ableton closes
 - Stable versioning system
 - Precise dB curves for volume & sends
-- Adds full key transposition, allowing you to shift any key to another—including modal transformations such as Dorian, Mixolydian, Lydian, and more—applied either to a single track or to the entire song.
-- Some bug fixes and reliability improvements
+- Reliability improvements and watchdog monitoring
 
 ---
 
-# 🧰 Available Tools (44 total in v2.2)
+# 🧰 Available Tools (v2.3)
 
 Below is the complete list of tools exposed by the MCP server.
 
@@ -41,14 +37,15 @@ Below is the complete list of tools exposed by the MCP server.
 
 | Tool | Description |
 |---|---|
-| `get_session_info` | Tempo, time signature, number of tracks, return tracks, master |
+| `get_session_info` | Tempo, time signature, tracks, returns, master |
 | `set_tempo` | Sets the tempo in BPM |
 | `start_playback` | Starts playback |
 | `stop_playback` | Stops playback |
 
 ---
 
-## 🎹 Key & Scale
+## 🎹 Key & Scale  
+*(Supported by Remote Script — exposed via MCP)*
 
 | Tool | Description |
 |---|---|
@@ -63,15 +60,15 @@ Below is the complete list of tools exposed by the MCP server.
 
 | Tool | Description |
 |---|---|
-| `get_track_info` | Name, type, devices, and clip slots of a track |
+| `get_track_info` | Full track info (name, type, devices, clips) |
 | `create_midi_track` | Creates a new MIDI track |
 | `set_track_name` | Renames a track |
-| `set_track_volume` | Sets volume in dB or raw value (0.85 = 0 dB) |
-| `set_track_pan` | Pan (-1.0 left … 0.0 center … 1.0 right) |
-| `set_track_send` | Sets a send to a return bus (in dB or raw value) |
+| `set_track_volume` | Sets volume (dB or raw) |
+| `set_track_pan` | Sets pan (-1.0 to 1.0) |
+| `set_track_send` | Sets send level (dB or raw) |
 | `set_track_mute` | Mute / unmute |
 | `set_track_solo` | Solo / unsolo |
-| `set_track_arm` | Arms / disarms the track for recording |
+| `set_track_arm` | Arm / disarm for recording |
 
 ---
 
@@ -79,9 +76,9 @@ Below is the complete list of tools exposed by the MCP server.
 
 | Tool | Description |
 |---|---|
-| `create_clip` | Creates a MIDI clip in a slot |
+| `create_clip` | Creates a MIDI clip |
+| `add_notes_to_clip` | Adds MIDI notes |
 | `set_clip_name` | Renames a clip |
-| `add_notes_to_clip` | Adds MIDI notes to a clip |
 | `fire_clip` | Launches clip playback |
 | `stop_clip` | Stops clip playback |
 
@@ -91,12 +88,14 @@ Below is the complete list of tools exposed by the MCP server.
 
 | Tool | Description |
 |---|---|
-| `get_arrangement_clips` | Lists all MIDI clips on a track |
-| `create_arrangement_clip` | Creates a MIDI clip at a position on the timeline |
+| `get_arrangement_clips` | Lists arrangement clips |
+| `create_arrangement_clip` | Creates a clip on the timeline |
 | `set_arrangement_clip_name` | Renames a clip |
-| `get_notes_arrangement` | Reads all notes from a clip |
-| `add_notes_to_arrangement_clip` | Adds notes to an existing clip |
-| `replace_notes_arrangement` | Replaces all notes (preserves automation & groove) |
+| `add_notes_to_arrangement_clip` | Adds notes |
+| `replace_notes_arrangement` | Replaces all notes |
+| `set_arrangement_envelope` | Writes automation |
+| `set_arrangement_clips_color` | Colors clips |
+| `transpose_arrangement_clips` | Chromatic or modal transposition |
 
 ---
 
@@ -105,8 +104,8 @@ Below is the complete list of tools exposed by the MCP server.
 | Tool | Description |
 |---|---|
 | `set_clip_envelope_point` | Writes automation points in a Session View clip |
-| `set_arrangement_envelope` | Writes automation points in an Arrangement View clip |
-| `clear_clip_envelope` | Clears the envelope of a parameter in a Session View clip |
+| `clear_clip_envelope` | Clears a Session View clip envelope |
+| `set_arrangement_envelope` | Writes automation in Arrangement View |
 
 ---
 
@@ -114,10 +113,9 @@ Below is the complete list of tools exposed by the MCP server.
 
 | Tool | Description |
 |---|---|
-| `get_device_parameters` | Lists all parameters of a device |
-| `set_device_parameter` | Changes the value of a device parameter |
-| `load_instrument_or_effect` | Loads an instrument or effect via its browser URI |
-| `load_drum_kit` | Loads a Drum Rack and a specific kit |
+| `get_device_parameters` | Lists all device parameters |
+| `set_device_parameters` | Sets multiple parameters at once |
+| `load_instrument_or_effect` | Loads an instrument/effect via URI |
 
 ---
 
@@ -125,9 +123,9 @@ Below is the complete list of tools exposed by the MCP server.
 
 | Tool | Description |
 |---|---|
-| `search_browser` | Searches instruments, effects, presets, and plugins (VST2/VST3/AU) |
+| `search_browser` | Searches instruments, effects, presets, plugins |
 | `get_browser_tree` | Returns the browser category tree |
-| `get_browser_items_at_path` | Lists items at a given browser path |
+| `get_browser_items_at_path` | Lists items at a given path |
 
 ---
 
@@ -135,8 +133,8 @@ Below is the complete list of tools exposed by the MCP server.
 
 | Tool | Description |
 |---|---|
-| `get_groove_pool` | Lists all grooves available in the Groove Pool |
-| `get_groove_amount` | Reads the global groove amount (0.0 – 1.0) |
+| `get_groove_pool` | Lists all grooves in the Groove Pool |
+| `get_groove_amount` | Reads the global groove amount |
 | `set_groove_amount` | Sets the global groove amount |
 | `apply_groove` | Applies a groove to a Session View clip |
 | `apply_groove_arrangement` | Applies a groove to an Arrangement View clip |
@@ -164,4 +162,3 @@ Below is the complete list of tools exposed by the MCP server.
 - Return track creation  
 
 ---
-
