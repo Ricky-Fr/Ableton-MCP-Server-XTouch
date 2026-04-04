@@ -18,7 +18,62 @@ except ImportError:
 # Constants for socket communication
 DEFAULT_PORT = 9877
 HOST = "localhost"
-REMOTE_VERSION = "2.3"
+REMOTE_VERSION = "2.4"
+
+# ── Palette officielle Ableton Live (70 couleurs) ────────────────────────────
+ABLETON_PALETTE = [
+    0xFF94A6, 0xFF3636, 0xFFB8BB, 0xFF1500, 0xA40000, 0xD3675A,
+    0xFF6400, 0xFFB000, 0xFFAD25, 0xE06A35, 0xC26222, 0x8C5A1B,
+    0xFEFF0A, 0xD2E498, 0x87FF2A, 0x5EC80A, 0x3BA200, 0x267300,
+    0x25FFA8, 0x19E9FF, 0x1AC3B9, 0x00A390, 0x00716B, 0x004040,
+    0x5AFFD6, 0x10C7FF, 0x10BEFF, 0x007DC3, 0x00558A, 0x002A5E,
+    0x4C6AFF, 0x0000FF, 0x001AFF, 0x0040CC, 0x002E99, 0x001266,
+    0x874BFF, 0xD31EFF, 0x8B00FF, 0x6200B3, 0x440080, 0x2A004D,
+    0xFF32D0, 0xFF007B, 0xFF3399, 0xCC005C, 0x990040, 0x660025,
+    0xFFB8D9, 0xFFCCB3, 0xFFF09E, 0xCEFF9E, 0xA8FFD4, 0xA8EEFF,
+    0xB3B3FF, 0xD4B3FF, 0xFFB3E0, 0xFF8080, 0xFFAA66, 0xFFFF80,
+    0xFFFFFF, 0xD3D3D3, 0xA0A0A0, 0x707070, 0x404040, 0x1A1A1A,
+    0x7B7B7B, 0x5A5A5A, 0x3A3A3A, 0xBEBEBE,
+]
+
+# ── Gammes : intervalles en demi-tons depuis la fondamentale ─────────────────
+# Clé  = nom utilisé dans les appels MCP (source_scale / target_scale)
+# Valeur = liste triée d'intervalles [0..11] sur une octave
+#
+# Pour ajouter une nouvelle gamme, il suffit d'ajouter une entrée ici.
+SCALE_INTERVALS = {
+    # ── Modes grecs (gammes diatoniques à 7 notes) ────────────────────────
+    "major":              [0, 2, 4, 5, 7, 9, 11],   # Ionien
+    "dorian":             [0, 2, 3, 5, 7, 9, 10],
+    "phrygian":           [0, 1, 3, 5, 7, 8, 10],
+    "lydian":             [0, 2, 4, 6, 7, 9, 11],
+    "mixolydian":         [0, 2, 4, 5, 7, 9, 10],
+    "minor":              [0, 2, 3, 5, 7, 8, 10],   # Éolien / mineur naturel
+    "locrian":            [0, 1, 3, 5, 6, 8, 10],
+    # ── Gammes mélodique & harmonique ─────────────────────────────────────
+    "melodicMinor":       [0, 2, 3, 5, 7, 9, 11],   # ascendant
+    "harmonicMinor":      [0, 2, 3, 5, 7, 8, 11],
+    "harmonicMajor":      [0, 2, 4, 5, 7, 8, 11],
+    # ── Modes du mineur mélodique ─────────────────────────────────────────
+    "dorianb2":           [0, 1, 3, 5, 7, 9, 10],   # Phrygien #6
+    "lydianAugmented":    [0, 2, 4, 6, 8, 9, 11],
+    "lydianDominant":     [0, 2, 4, 6, 7, 9, 10],   # Overtone
+    "mixolydianb6":       [0, 2, 4, 5, 7, 8, 10],
+    "halfDiminished":     [0, 2, 3, 5, 6, 8, 10],   # Locrien #2
+    "altered":            [0, 1, 3, 4, 6, 8, 10],   # Super-Locrien
+    # ── Modes du mineur harmonique ────────────────────────────────────────
+    "phrygianDominant":   [0, 1, 4, 5, 7, 8, 10],
+    # ── Gammes symétriques ────────────────────────────────────────────────
+    "diminished":         [0, 2, 3, 5, 6, 8, 9, 11],   # ton-demi-ton (8 notes)
+    "diminishedWH":       [0, 1, 3, 4, 6, 7, 9, 10],   # demi-ton-ton (8 notes)
+    "wholeTone":          [0, 2, 4, 6, 8, 10],          # (6 notes)
+    # ── Pentatoniques & Blues ─────────────────────────────────────────────
+    "pentatonicMajor":    [0, 2, 4, 7, 9],
+    "pentatonicMinor":    [0, 3, 5, 7, 10],
+    "blues":              [0, 3, 5, 6, 7, 10],
+    # ── Chromatique (fallback universel) ─────────────────────────────────
+    "chromatic":          list(range(12)),
+}
 
 def create_instance(c_instance):
     """Create and return the AbletonMCP script instance"""
@@ -229,6 +284,9 @@ class AbletonMCP(ControlSurface):
             elif command_type == "get_track_info":
                 track_index = params.get("track_index", 0)
                 response["result"] = self._get_track_info(track_index)
+            elif command_type == "get_track_color":
+                track_index = params.get("track_index", 0)
+                response["result"] = self._get_track_color(track_index)
             # Commands that modify Live's state should be scheduled on the main thread
             elif command_type in ["create_midi_track", "set_track_name", 
                                  "create_clip", "add_notes_to_clip", "set_clip_name", 
@@ -239,8 +297,11 @@ class AbletonMCP(ControlSurface):
                                  "set_track_volume", "set_track_pan", "set_track_send",
                                  "set_track_mute", "set_track_solo", "set_track_arm",
                                  "set_groove_amount", "apply_groove", "apply_groove_arrangement",
-                                 "get_notes_arrangement", "replace_notes_arrangement",
-                                 "get_notes_clip", "replace_notes_clip"]:
+                                 "get_notes_arrangement_batch", "replace_notes_arrangement",
+                                 "get_notes_clip", "replace_notes_clip",
+                                 "set_track_color", "set_clip_color",
+                                 "set_arrangement_clips_color",
+                                 "transpose_arrangement_clips"]:
                 # Use a thread-safe approach with a response queue
                 response_queue = queue.Queue()
                 
@@ -351,10 +412,10 @@ class AbletonMCP(ControlSurface):
                             position = params.get("position", 0.0)
                             groove_index = params.get("groove_index", 0)
                             result = self._apply_groove_arrangement(track_index, position, groove_index)
-                        elif command_type == "get_notes_arrangement":
+                        elif command_type == "get_notes_arrangement_batch":
                             track_index = params.get("track_index", 0)
-                            position = params.get("position", 0.0)
-                            result = self._get_notes_arrangement(track_index, position)
+                            positions = params.get("positions", [])
+                            result = self._get_notes_arrangement_batch(track_index, positions)
                         elif command_type == "replace_notes_arrangement":
                             track_index = params.get("track_index", 0)
                             position = params.get("position", 0.0)
@@ -369,6 +430,34 @@ class AbletonMCP(ControlSurface):
                             clip_index = params.get("clip_index", 0)
                             notes = params.get("notes", [])
                             result = self._replace_notes_clip(track_index, clip_index, notes)
+                        elif command_type == "set_track_color":
+                            track_index = params.get("track_index", 0)
+                            color = params.get("color", 0)
+                            result = self._set_track_color(track_index, color)
+                        elif command_type == "set_clip_color":
+                            track_index = params.get("track_index", 0)
+                            clip_index = params.get("clip_index", 0)
+                            color = params.get("color", 0)
+                            result = self._set_clip_color(track_index, clip_index, color)
+                        elif command_type == "set_arrangement_clips_color":
+                            track_index = params.get("track_index", 0)
+                            positions = params.get("positions", [])
+                            color = params.get("color", 0)
+                            result = self._set_arrangement_clips_color(track_index, positions, color)
+                        elif command_type == "transpose_arrangement_clips":
+                            track_index  = params.get("track_index", 0)
+                            positions    = params.get("positions", [])
+                            source_root  = params.get("source_root",  None)
+                            source_scale = params.get("source_scale", None)
+                            target_root  = params.get("target_root",  None)
+                            target_scale = params.get("target_scale", None)
+                            semitones    = params.get("semitones",    None)
+                            result = self._transpose_arrangement_clips(
+                                track_index, positions,
+                                source_root=source_root, source_scale=source_scale,
+                                target_root=target_root, target_scale=target_scale,
+                                semitones=semitones,
+                            )
                         
                         # Put the result in the queue
                         response_queue.put({"status": "success", "result": result})
@@ -426,12 +515,11 @@ class AbletonMCP(ControlSurface):
                 track_index = params.get("track_index", 0)
                 device_index = params.get("device_index", 0)
                 response["result"] = self._get_device_parameters(track_index, device_index)
-            elif command_type == "set_device_parameter":
+            elif command_type == "set_device_parameters":
                 track_index = params.get("track_index", 0)
                 device_index = params.get("device_index", 0)
-                parameter_index = params.get("parameter_index", 0)
-                value = params.get("value", 0.0)
-                response["result"] = self._set_device_parameter(track_index, device_index, parameter_index, value)
+                parameters = params.get("parameters", [])
+                response["result"] = self._set_device_parameters(track_index, device_index, parameters)
             elif command_type == "get_browser_item":
                 uri = params.get("uri", None)
                 path = params.get("path", None)
@@ -480,15 +568,6 @@ class AbletonMCP(ControlSurface):
                 chain_device_index = params.get("chain_device_index", 0)
                 response["result"] = self._get_rack_chain_device_parameters(
                     track_index, device_index, chain_index, chain_device_index)
-            elif command_type == "set_rack_chain_device_parameter":
-                track_index = params.get("track_index", 0)
-                device_index = params.get("device_index", 0)
-                chain_index = params.get("chain_index", 0)
-                chain_device_index = params.get("chain_device_index", 0)
-                parameter_index = params.get("parameter_index", 0)
-                value = params.get("value", 0.0)
-                response["result"] = self._set_rack_chain_device_parameter(
-                    track_index, device_index, chain_index, chain_device_index, parameter_index, value)
             elif command_type == "set_rack_chain_device_parameters":
                 track_index = params.get("track_index", 0)
                 device_index = params.get("device_index", 0)
@@ -1238,8 +1317,12 @@ class AbletonMCP(ControlSurface):
             self.log_message("Error getting device parameters: " + str(e))
             raise
 
-    def _set_device_parameter(self, track_index, device_index, parameter_index, value):
-        """Set a parameter value on a device"""
+    def _set_device_parameters(self, track_index, device_index, parameters):
+        """Set multiple parameter values on a device in one call.
+
+        parameters: list of {parameter_index: int, value: float} dicts.
+        Each value is clamped to [param.min, param.max] automatically.
+        """
         try:
             if track_index < 0 or track_index >= len(self._song.tracks):
                 raise IndexError("Track index out of range")
@@ -1247,21 +1330,28 @@ class AbletonMCP(ControlSurface):
             if device_index < 0 or device_index >= len(track.devices):
                 raise IndexError("Device index out of range")
             device = track.devices[device_index]
-            if parameter_index < 0 or parameter_index >= len(device.parameters):
-                raise IndexError("Parameter index out of range")
-            param = device.parameters[parameter_index]
-            # Clamp value between min and max
-            clamped_value = max(param.min, min(param.max, value))
-            param.value = clamped_value
+            results = []
+            for p in parameters:
+                parameter_index = p["parameter_index"]
+                value = p["value"]
+                if parameter_index < 0 or parameter_index >= len(device.parameters):
+                    results.append({"parameter_index": parameter_index, "error": "index out of range"})
+                    continue
+                param = device.parameters[parameter_index]
+                clamped_value = max(param.min, min(param.max, value))
+                param.value = clamped_value
+                results.append({
+                    "parameter_index": parameter_index,
+                    "parameter_name": param.name,
+                    "value": param.value
+                })
             return {
                 "track_index": track_index,
                 "device_index": device_index,
-                "parameter_index": parameter_index,
-                "parameter_name": param.name,
-                "value": param.value
+                "results": results
             }
         except Exception as e:
-            self.log_message("Error setting device parameter: " + str(e))
+            self.log_message("Error setting device parameters: " + str(e))
             raise
 
     # -------------------------------------------------------------------------
@@ -1787,38 +1877,45 @@ class AbletonMCP(ControlSurface):
             }
         return {"error": "Groove assignment not supported on this clip"}
 
-    def _get_notes_arrangement(self, track_index, position):
-        """Lit toutes les notes MIDI d'un clip Arrangement View."""
+    def _get_notes_arrangement_batch(self, track_index, positions):
+        """Lit toutes les notes MIDI de plusieurs clips Arrangement View en un seul appel."""
         self._song = self.song()
         if track_index < 0 or track_index >= len(self._song.tracks):
             raise IndexError("Track index out of range: {0}".format(track_index))
         track = self._song.tracks[track_index]
-        target_clip = None
-        for clip in track.arrangement_clips:
-            if abs(clip.start_time - position) < 0.01:
-                target_clip = clip
-                break
-        if target_clip is None:
-            raise RuntimeError("No arrangement clip found at position {0} on track {1}".format(position, track_index))
-
-        # get_notes retourne des tuples (pitch, start_time, duration, velocity, mute)
-        raw_notes = target_clip.get_notes(0, 0, target_clip.length, 128)
-        notes = [
-            {
-                "pitch":      int(n[0]),
-                "start_time": float(n[1]),
-                "duration":   float(n[2]),
-                "velocity":   int(n[3]),
-                "mute":       bool(n[4])
-            }
-            for n in raw_notes
-        ]
+        clips_data = []
+        for position in positions:
+            target_clip = None
+            for clip in track.arrangement_clips:
+                if abs(clip.start_time - position) < 0.01:
+                    target_clip = clip
+                    break
+            if target_clip is None:
+                clips_data.append({
+                    "clip_position": position,
+                    "error": "no clip found"
+                })
+                continue
+            raw_notes = target_clip.get_notes(0, 0, target_clip.length, 128)
+            notes = [
+                {
+                    "pitch":      int(n[0]),
+                    "start_time": float(n[1]),
+                    "duration":   float(n[2]),
+                    "velocity":   int(n[3]),
+                    "mute":       bool(n[4])
+                }
+                for n in raw_notes
+            ]
+            clips_data.append({
+                "clip_position": position,
+                "clip_length":   target_clip.length,
+                "note_count":    len(notes),
+                "notes":         notes
+            })
         return {
-            "track_index":   track_index,
-            "clip_position": position,
-            "clip_length":   target_clip.length,
-            "note_count":    len(notes),
-            "notes":         notes
+            "track_index": track_index,
+            "clips":       clips_data
         }
 
     def _replace_notes_arrangement(self, track_index, position, notes):
@@ -2219,30 +2316,6 @@ class AbletonMCP(ControlSurface):
             self.log_message("Error getting rack chain device parameters: " + str(e))
             raise
 
-    def _set_rack_chain_device_parameter(self, track_index, device_index, chain_index, chain_device_index, parameter_index, value):
-        """Set a single parameter on a device nested inside a rack chain."""
-        try:
-            track = self._song.tracks[track_index]
-            rack = track.devices[device_index]
-            if not hasattr(rack, 'chains'):
-                raise TypeError("Device at index {0} is not a rack".format(device_index))
-            chain = rack.chains[chain_index]
-            device = chain.devices[chain_device_index]
-            param = device.parameters[parameter_index]
-            clamped = max(param.min, min(param.max, float(value)))
-            param.value = clamped
-            return {
-                "track_index": track_index,
-                "device_index": device_index,
-                "chain_index": chain_index,
-                "chain_device_index": chain_device_index,
-                "parameter_index": parameter_index,
-                "parameter_name": param.name,
-                "value": param.value
-            }
-        except Exception as e:
-            self.log_message("Error setting rack chain device parameter: " + str(e))
-            raise
 
     def _set_rack_chain_device_parameters(self, track_index, device_index, chain_index, chain_device_index, parameters):
         """Set multiple parameters at once on a device nested inside a rack chain."""
@@ -2389,3 +2462,284 @@ class AbletonMCP(ControlSurface):
         except Exception as e:
             self.log_message("Error setting song scale: " + str(e))
             return {"error": str(e)}
+
+    # -------------------------------------------------------------------------
+    #  Color helpers
+    # -------------------------------------------------------------------------
+
+    def _snap_to_palette(self, color):
+        """Retourne la couleur Ableton la plus proche (distance euclidienne RGB).
+        
+        Ableton n'accepte que les 70 couleurs de sa palette officielle.
+        Cette fonction arrondit n'importe quel entier 0xRRGGBB à la valeur
+        la plus proche dans ABLETON_PALETTE, ce qui évite les couleurs
+        inattendues ou rejetées par l'API Live.
+        """
+        color = int(color)
+        r = (color >> 16) & 0xFF
+        g = (color >> 8)  & 0xFF
+        b =  color        & 0xFF
+        best, best_dist = ABLETON_PALETTE[0], float('inf')
+        for c in ABLETON_PALETTE:
+            dr = r - ((c >> 16) & 0xFF)
+            dg = g - ((c >> 8)  & 0xFF)
+            db = b - ( c        & 0xFF)
+            d  = dr*dr + dg*dg + db*db
+            if d < best_dist:
+                best_dist, best = d, c
+                if d == 0:
+                    break
+        return best
+
+    def _set_track_color(self, track_index, color):
+        """Set the color of a track.
+        
+        color: integer in 0xRRGGBB format (e.g. 0xFF0000 for red).
+        The value is automatically snapped to the nearest Ableton palette color.
+        """
+        try:
+            snapped = self._snap_to_palette(color)
+            track = self._song.tracks[track_index]
+            track.color = snapped
+            return {
+                "track_index": track_index,
+                "name": track.name,
+                "color_requested": hex(int(color)),
+                "color_applied": hex(snapped),
+                "color": track.color
+            }
+        except Exception as e:
+            self.log_message("Error setting track color: " + str(e))
+            raise
+
+    def _get_track_color(self, track_index):
+        """Get the current color of a track.
+
+        Returns the raw integer color stored by Ableton (0xRRGGBB) along with
+        its hex representation, so the caller can reuse it directly in
+        set_track_color / set_arrangement_clips_color without conversion.
+        """
+        try:
+            track = self._song.tracks[track_index]
+            color = track.color
+            return {
+                "track_index": track_index,
+                "name": track.name,
+                "color": color,
+                "color_hex": hex(color)
+            }
+        except Exception as e:
+            self.log_message("Error getting track color: " + str(e))
+            return {"error": str(e)}
+
+    def _set_clip_color(self, track_index, clip_index, color):
+        """Set the color of a Session View clip slot.
+        
+        color: integer in 0xRRGGBB format (e.g. 0x00FF00 for green).
+        The value is automatically snapped to the nearest Ableton palette color.
+        """
+        try:
+            snapped = self._snap_to_palette(color)
+            track = self._song.tracks[track_index]
+            slot = track.clip_slots[clip_index]
+            if not slot.has_clip:
+                raise ValueError("No clip in slot {0} on track {1}".format(clip_index, track_index))
+            slot.clip.color = snapped
+            return {
+                "track_index": track_index,
+                "clip_index": clip_index,
+                "clip_name": slot.clip.name,
+                "color_requested": hex(int(color)),
+                "color_applied": hex(snapped),
+                "color": slot.clip.color
+            }
+        except Exception as e:
+            self.log_message("Error setting clip color: " + str(e))
+            raise
+
+
+    def _set_arrangement_clips_color(self, track_index, positions, color):
+        """Set the same color on multiple Arrangement View clips in one call.
+
+        positions: list of clip start times in beats.
+        color:     integer in 0xRRGGBB format, snapped to Ableton palette.
+        """
+        try:
+            snapped = self._snap_to_palette(color)
+            track = self._song.tracks[track_index]
+            results = []
+            for pos in positions:
+                target_clip = None
+                for slot in track.arrangement_clips:
+                    if abs(slot.start_time - pos) < 0.001:
+                        target_clip = slot
+                        break
+                if target_clip is None:
+                    results.append({"position": pos, "error": "no clip found"})
+                    continue
+                target_clip.color = snapped
+                results.append({
+                    "position": pos,
+                    "clip_name": target_clip.name,
+                    "color_applied": hex(snapped),
+                    "color": target_clip.color
+                })
+            return {
+                "track_index": track_index,
+                "color_requested": hex(int(color)),
+                "color_applied": hex(snapped),
+                "results": results
+            }
+        except Exception as e:
+            self.log_message("Error setting arrangement clips color: " + str(e))
+            raise
+
+    # -------------------------------------------------------------------------
+    #  Transpose helpers
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def _transpose_scale(pitch, source_root, source_scale_name, target_root, target_scale_name):
+        """Transpose a single MIDI pitch from one scale/root to another.
+
+        Parameters
+        ----------
+        pitch             : int  MIDI pitch (0-127)
+        source_root       : int  pitch class of the source tonic, 0-11 (C=0)
+        source_scale_name : str  key in SCALE_INTERVALS (e.g. "major", "dorian")
+        target_root       : int  pitch class of the target tonic, 0-11
+        target_scale_name : str  key in SCALE_INTERVALS
+
+        Logic
+        -----
+        Notes IN the source scale
+            The scale degree is preserved: degree N in source → degree N in
+            target.  If the target scale has fewer degrees (e.g. pentatonic
+            target for a heptatonic source), the degree index wraps modulo
+            len(target).
+
+        Notes OUT of the source scale (chromatic passing notes, etc.)
+            The chromatic offset relative to the source root is kept as-is
+            and simply rebased to the target root, so the "colour" of the
+            note is preserved without forcing it into the target scale.
+
+        Returns
+        -------
+        int  new MIDI pitch, clamped to [0, 127]
+        """
+        src = SCALE_INTERVALS.get(source_scale_name, SCALE_INTERVALS["major"])
+        tgt = SCALE_INTERVALS.get(target_scale_name, SCALE_INTERVALS["major"])
+
+        # Chromatic offset relative to the source root (always 0-11)
+        # Python // is floor division → works correctly for negative values:
+        #   e.g. pitch=35, source_root=36  →  chroma=11, octave=-1
+        chroma = (pitch - source_root) % 12
+        octave = (pitch - source_root) // 12
+
+        if chroma in src:
+            degree     = src.index(chroma)
+            tgt_chroma = tgt[degree % len(tgt)]
+        else:
+            # Chromatic note: rebase to target root, keep offset unchanged
+            tgt_chroma = chroma
+
+        new_pitch = target_root + octave * 12 + tgt_chroma
+        return max(0, min(127, new_pitch))
+
+    def _transpose_arrangement_clips(self, track_index, positions,
+                                     source_root=None, source_scale=None,
+                                     target_root=None, target_scale=None,
+                                     semitones=None):
+        """Transpose MIDI notes on multiple Arrangement View clips.
+
+        Scale-aware mode  (preferred — precise, no computation needed by Claude)
+        ─────────────────
+        source_root  : int  pitch class of source tonic (0=C … 11=B)
+        source_scale : str  scale name — key in SCALE_INTERVALS
+                            (e.g. "major", "minor", "dorian", "mixolydian" …)
+        target_root  : int  pitch class of target tonic
+        target_scale : str  scale name of the target key
+
+        Diatonic notes are mapped degree-by-degree to the target scale.
+        Chromatic (out-of-scale) notes are rebased from source to target root
+        while keeping their chromatic offset intact.
+
+        Legacy / simple mode  (fallback)
+        ─────────────────────
+        semitones : int  plain chromatic shift applied to every note.
+                         Used when scale params are absent or incomplete.
+
+        Both modes clamp output pitches to [0, 127].
+        """
+        try:
+            use_scale = (source_root  is not None and source_scale is not None
+                         and target_root is not None and target_scale is not None)
+
+            track   = self._song.tracks[track_index]
+            results = []
+
+            for pos in positions:
+                # Locate the clip at this timeline position
+                target_clip = None
+                for c in track.arrangement_clips:
+                    if abs(c.start_time - pos) < 0.001:
+                        target_clip = c
+                        break
+                if target_clip is None:
+                    results.append({
+                        "position": pos,
+                        "status": "error",
+                        "message": "no clip found"
+                    })
+                    continue
+
+                notes = target_clip.get_notes_extended(0, 128, 0, target_clip.length)
+                #                                       ^from_pitch  ^pitch_span  ^from_time  ^time_span
+
+                if use_scale:
+                    new_notes = [
+                        Live.Clip.MidiNoteSpecification(
+                            start_time=n.start_time,
+                            duration=n.duration,
+                            pitch=self._transpose_scale(
+                                n.pitch,
+                                int(source_root), source_scale,
+                                int(target_root), target_scale,
+                            ),
+                            velocity=n.velocity,
+                            mute=n.mute,
+                        )
+                        for n in notes
+                    ]
+                else:
+                    shift = int(semitones) if semitones is not None else 0
+                    new_notes = [
+                        Live.Clip.MidiNoteSpecification(
+                            start_time=n.start_time,
+                            duration=n.duration,
+                            pitch=max(0, min(127, n.pitch + shift)),
+                            velocity=n.velocity,
+                            mute=n.mute,
+                        )
+                        for n in notes
+                    ]
+
+                # +1 on time_span is required to capture notes at the very end
+                target_clip.remove_notes_extended(from_pitch=0, pitch_span=128, from_time=0, time_span=target_clip.length + 1)
+                target_clip.add_new_notes(tuple(new_notes))
+
+                results.append({
+                    "position":        pos,
+                    "clip_name":       target_clip.name,
+                    "notes_transposed": len(new_notes),
+                    "status":          "ok",
+                })
+
+            return {
+                "track_index": track_index,
+                "mode":        "scale" if use_scale else "chromatic",
+                "results":     results,
+            }
+        except Exception as e:
+            self.log_message("Error transposing arrangement clips: " + str(e))
+            raise
