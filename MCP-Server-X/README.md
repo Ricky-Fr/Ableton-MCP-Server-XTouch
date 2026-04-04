@@ -1,17 +1,17 @@
 # 🚀 MCP Server for Ableton Live  
-**Version 2.3 — Stable**
+**Version 2.4 — Stable**
 
 A lightweight, fast, and fully scriptable **MCP server** for Ableton Live.  
-It exposes a complete set of tools to control Live: session, tracks, clips, devices, browser, groove, automation, and more.
+It exposes a complete set of tools to control Live: session, tracks, clips, devices, browser, groove, automation, modal transposition, and more.
 
 Designed for AI agents, control surfaces, and advanced automation workflows.
 
 ---
 
-# ✨ Features
+# ✨ Features (v2.4)
 
 - Full session control (tempo, playback, time signature)
-- Track management (volume, pan, sends, mute/solo/arm)
+- Track management (volume, pan, sends, mute/solo/arm, colors)
 - MIDI clip creation in Session & Arrangement View
 - Device parameter access (internal & external plugins)
 - Drum Rack & instrument loading
@@ -19,15 +19,16 @@ Designed for AI agents, control surfaces, and advanced automation workflows.
 - Automation writing (Session & Arrangement)
 - Groove Pool integration
 - Key & scale reading and transformation
-- Modal transposition (Dorian, Mixolydian, Lydian…)
-- Auto‑shutdown when Ableton closes
-- Stable versioning system
+- Modal transposition (major, minor, dorian, phrygian, melodic minor modes, harmonic minor modes, diminished, whole tone, pentatonics, blues…)
+- Arrangement clip batch processing
 - Precise dB curves for volume & sends
+- Auto‑shutdown when Ableton closes
+- Thread‑safe main‑thread scheduling
 - Reliability improvements and watchdog monitoring
 
 ---
 
-# 🧰 Available Tools (v2.3)
+# 🧰 Available Tools (v2.4)
 
 Below is the complete list of tools exposed by the MCP server.
 
@@ -41,6 +42,7 @@ Below is the complete list of tools exposed by the MCP server.
 | `set_tempo` | Sets the tempo in BPM |
 | `start_playback` | Starts playback |
 | `stop_playback` | Stops playback |
+| `get_view_mode` | Returns Session or Arrangement view |
 
 ---
 
@@ -53,6 +55,7 @@ Below is the complete list of tools exposed by the MCP server.
 | `set_song_root_note` | Sets the root note (0=C … 11=B) |
 | `get_song_scale` | Reads the mode and scale name |
 | `set_song_scale` | Sets the scale by name (`major`, `minor`, `dorian`…) |
+| `transpose_arrangement_clips` | Chromatic or modal transposition using internal scale intervals |
 
 ---
 
@@ -60,7 +63,7 @@ Below is the complete list of tools exposed by the MCP server.
 
 | Tool | Description |
 |---|---|
-| `get_track_info` | Full track info (name, type, devices, clips) |
+| `get_track_info` | Full track info (name, type, devices, clips, color) |
 | `create_midi_track` | Creates a new MIDI track |
 | `set_track_name` | Renames a track |
 | `set_track_volume` | Sets volume (dB or raw) |
@@ -69,6 +72,8 @@ Below is the complete list of tools exposed by the MCP server.
 | `set_track_mute` | Mute / unmute |
 | `set_track_solo` | Solo / unsolo |
 | `set_track_arm` | Arm / disarm for recording |
+| `get_track_color` | Reads track color |
+| `set_track_color` | Sets track color |
 
 ---
 
@@ -78,9 +83,12 @@ Below is the complete list of tools exposed by the MCP server.
 |---|---|
 | `create_clip` | Creates a MIDI clip |
 | `add_notes_to_clip` | Adds MIDI notes |
+| `replace_notes_clip` | Replaces all notes in a clip |
+| `get_notes_clip` | Reads all notes from a clip |
 | `set_clip_name` | Renames a clip |
 | `fire_clip` | Launches clip playback |
 | `stop_clip` | Stops clip playback |
+| `set_clip_color` | Colors a Session View clip |
 
 ---
 
@@ -93,8 +101,7 @@ Below is the complete list of tools exposed by the MCP server.
 | `set_arrangement_clip_name` | Renames a clip |
 | `add_notes_to_arrangement_clip` | Adds notes |
 | `replace_notes_arrangement` | Replaces all notes |
-| `set_arrangement_envelope` | Writes automation |
-| `set_arrangement_clips_color` | Colors clips |
+| `set_arrangement_clips_color` | Colors multiple clips |
 | `transpose_arrangement_clips` | Chromatic or modal transposition |
 
 ---
@@ -116,6 +123,7 @@ Below is the complete list of tools exposed by the MCP server.
 | `get_device_parameters` | Lists all device parameters |
 | `set_device_parameters` | Sets multiple parameters at once |
 | `load_instrument_or_effect` | Loads an instrument/effect via URI |
+| `load_browser_item` | Loads a browser item into a track |
 
 ---
 
@@ -126,6 +134,9 @@ Below is the complete list of tools exposed by the MCP server.
 | `search_browser` | Searches instruments, effects, presets, plugins |
 | `get_browser_tree` | Returns the browser category tree |
 | `get_browser_items_at_path` | Lists items at a given path |
+| `get_browser_item` | Returns metadata for a browser item |
+| `get_browser_categories` | Lists browser categories |
+| `get_browser_items` | Lists items inside a category or folder |
 
 ---
 
@@ -159,6 +170,4 @@ Below is the complete list of tools exposed by the MCP server.
 - Warp markers  
 - Device preset loading  
 - Track freeze/flatten  
-- Return track creation  
-
----
+- Return track creation
