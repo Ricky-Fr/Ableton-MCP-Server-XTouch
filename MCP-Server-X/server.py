@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("AbletonMCPServer")
 
-SERVER_VERSION = "2.3"
+SERVER_VERSION = "2.4"
 print(f"==========================================")
 print(f"  AbletonMCP Server - Version {SERVER_VERSION}")
 print(f"==========================================")
@@ -114,14 +114,16 @@ class AbletonConnection:
         is_modifying_command = command_type in [
             "create_midi_track", "create_audio_track", "set_track_name",
             "create_clip", "add_notes_to_clip", "set_clip_name",
-            "set_tempo", "fire_clip", "stop_clip", "set_device_parameter",
+            "set_tempo", "fire_clip", "stop_clip", "set_device_parameters",
             "start_playback", "stop_playback", "load_instrument_or_effect",
             "create_arrangement_clip", "add_notes_to_arrangement_clip",
             "set_arrangement_clip_name", "get_arrangement_clips",
             "set_track_volume", "set_track_pan", "set_track_send",
             "set_clip_envelope_point", "clear_clip_envelope", "set_arrangement_envelope",
             "replace_notes_arrangement",
-            "get_notes_clip", "replace_notes_clip", "get_view_mode"
+            "get_notes_clip", "replace_notes_clip", "get_view_mode",
+            "set_arrangement_clips_color",
+            "transpose_arrangement_clips"
         ]
 
         # Commandes lentes (browser) : timeout étendu à 30s
@@ -343,28 +345,38 @@ def get_device_parameters(ctx: Context, track_index: int, device_index: int) -> 
         return f"Error getting device parameters: {str(e)}"
 
 @mcp.tool()
-def set_device_parameter(ctx: Context, track_index: int, device_index: int, parameter_index: int, value: float) -> str:
+def set_device_parameters(
+    ctx: Context,
+    track_index: int,
+    device_index: int,
+    parameters: List[Dict[str, Any]]
+) -> str:
     """
-    Set a parameter value on a device.
+    Set multiple parameter values on a device in a single call.
+    Pass parameters=[{"parameter_index": x, "value": v}] for a single param.
 
     Parameters:
-    - track_index: The index of the track
-    - device_index: The index of the device on the track
-    - parameter_index: The index of the parameter to modify
-    - value: The new value (will be clamped between min and max automatically)
+    - track_index:  Index of the track (0-based)
+    - device_index: Index of the device on the track (0-based)
+    - parameters:   List of {parameter_index: int, value: float} dicts
+
+    Example:
+      parameters = [
+        {"parameter_index": 2, "value": 0.8},
+        {"parameter_index": 5, "value": 0.3}
+      ]
     """
     try:
         ableton = get_ableton_connection()
-        result = ableton.send_command("set_device_parameter", {
+        result = ableton.send_command("set_device_parameters", {
             "track_index": track_index,
             "device_index": device_index,
-            "parameter_index": parameter_index,
-            "value": value
+            "parameters": parameters
         })
         return json.dumps(result, indent=2)
     except Exception as e:
-        logger.error(f"Error setting device parameter: {str(e)}")
-        return f"Error setting device parameter: {str(e)}"
+        logger.error(f"Error setting device parameters: {str(e)}")
+        return f"Error setting device parameters: {str(e)}"
 
 @mcp.tool()
 def get_session_info(ctx: Context) -> str:
@@ -1317,25 +1329,27 @@ def apply_groove_arrangement(ctx: Context, track_index: int, position: float, gr
 
 
 @mcp.tool()
-def get_notes_arrangement(ctx: Context, track_index: int, position: float) -> str:
+def get_notes_arrangement_batch(ctx: Context, track_index: int, positions: List[float]) -> str:
     """
-    Read all MIDI notes from an Arrangement View clip.
+    Read all MIDI notes from one or more Arrangement View clips in a single call.
+    Use this instead of calling get_notes for each clip individually — saves tokens
+    and round-trips. Pass a list with a single position to read just one clip.
 
     Parameters:
     - track_index: Index of the track (0-based)
-    - position:    Start position of the target clip in beats on the Arrangement timeline
+    - positions:   List of clip start positions in beats on the Arrangement timeline
     """
     try:
         ableton = get_ableton_connection()
-        result = ableton.send_command("get_notes_arrangement", {
+        result = ableton.send_command("get_notes_arrangement_batch", {
             "track_index": track_index,
-            "position":    position
+            "positions":   positions
         })
         import json
         return json.dumps(result, indent=2)
     except Exception as e:
-        logger.error(f"Error getting notes from arrangement clip: {str(e)}")
-        return f"Error getting notes from arrangement clip: {str(e)}"
+        logger.error(f"Error getting notes from arrangement clips: {str(e)}")
+        return f"Error getting notes from arrangement clips: {str(e)}"
         
 @mcp.tool()
 def replace_notes_arrangement(
@@ -1576,45 +1590,6 @@ def get_rack_chain_device_parameters(
 
 
 @mcp.tool()
-def set_rack_chain_device_parameter(
-    ctx: Context,
-    track_index: int,
-    device_index: int,
-    chain_index: int,
-    chain_device_index: int,
-    parameter_index: int,
-    value: float
-) -> str:
-    """
-    Set a parameter on a plugin/device nested inside a rack chain.
-    Use this when a plugin has more than 16 parameters — wrap it in a rack
-    and use this tool to modify any of its parameters.
-
-    Parameters:
-    - track_index:        Index of the track (0-based)
-    - device_index:       Index of the rack on the track (0-based)
-    - chain_index:        Index of the chain inside the rack (0-based)
-    - chain_device_index: Index of the device inside that chain (0-based)
-    - parameter_index:    Index of the parameter to set (0-based)
-    - value:              New value (clamped to the parameter's min/max automatically)
-    """
-    try:
-        ableton = get_ableton_connection()
-        result = ableton.send_command("set_rack_chain_device_parameter", {
-            "track_index": track_index,
-            "device_index": device_index,
-            "chain_index": chain_index,
-            "chain_device_index": chain_device_index,
-            "parameter_index": parameter_index,
-            "value": value
-        })
-        return json.dumps(result, indent=2)
-    except Exception as e:
-        logger.error(f"Error setting rack chain device parameter: {str(e)}")
-        return f"Error setting rack chain device parameter: {str(e)}"
-
-
-@mcp.tool()
 def set_rack_chain_device_parameters(
     ctx: Context,
     track_index: int,
@@ -1625,7 +1600,7 @@ def set_rack_chain_device_parameters(
 ) -> str:
     """
     Set multiple parameters at once on a plugin/device nested inside a rack chain.
-    More efficient than calling set_rack_chain_device_parameter repeatedly.
+    Pass parameters=[{...}] with a single entry for a single parameter.
 
     Parameters:
     - track_index:        Index of the track (0-based)
@@ -1653,6 +1628,190 @@ def set_rack_chain_device_parameters(
     except Exception as e:
         logger.error(f"Error setting rack chain device parameters: {str(e)}")
         return f"Error setting rack chain device parameters: {str(e)}"
+
+
+
+@mcp.tool()
+def get_track_color(
+    ctx: Context,
+    track_index: int
+) -> str:
+    """
+    Get the current color of a track in Ableton Live.
+
+    Returns the raw integer color (0xRRGGBB) and its hex representation.
+    Use the returned color value directly in set_track_color or
+    set_arrangement_clips_color to copy a color from one track to another.
+
+    Parameters:
+    - track_index: Index of the track (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_track_color", {
+            "track_index": track_index
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting track color: {str(e)}")
+        return f"Error getting track color: {str(e)}"
+
+
+@mcp.tool()
+def set_track_color(
+    ctx: Context,
+    track_index: int,
+    color: int
+) -> str:
+    """
+    Set the color of a track in Ableton Live.
+
+    Parameters:
+    - track_index: Index of the track (0-based)
+    - color:       Color as an integer in 0xRRGGBB format.
+                   Examples: 0xFF0000 (red=16711680), 0x00FF00 (green=65280),
+                             0x0000FF (blue=255), 0xFFFF00 (yellow=16776960)
+
+    Tip: use standard hex color pickers and convert to int.
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_track_color", {
+            "track_index": track_index,
+            "color": color
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting track color: {str(e)}")
+        return f"Error setting track color: {str(e)}"
+
+
+@mcp.tool()
+def set_clip_color(
+    ctx: Context,
+    track_index: int,
+    clip_index: int,
+    color: int
+) -> str:
+    """
+    Set the color of a clip in the Session View.
+
+    Parameters:
+    - track_index: Index of the track (0-based)
+    - clip_index:  Index of the clip slot (0-based)
+    - color:       Color as an integer in 0xRRGGBB format.
+                   Examples: 0xFF0000 (red=16711680), 0x00FF00 (green=65280),
+                             0x0000FF (blue=255), 0xFFFF00 (yellow=16776960)
+
+    Note: the clip slot must already contain a clip.
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_clip_color", {
+            "track_index": track_index,
+            "clip_index": clip_index,
+            "color": color
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting clip color: {str(e)}")
+        return f"Error setting clip color: {str(e)}"
+
+@mcp.tool()
+def set_arrangement_clips_color(
+    ctx: Context,
+    track_index: int,
+    positions: List[float],
+    color: int
+) -> str:
+    """
+    Set the same color on multiple clips in the Arrangement View in a single call.
+    Pass positions=[x] for a single clip.
+
+    Parameters:
+    - track_index: Index of the track (0-based)
+    - positions:   List of clip start positions in beats (use get_arrangement_clips to retrieve them)
+    - color:       Color as an integer in 0xRRGGBB format.
+                   Examples: 0xFF0000 (red=16711680), 0x00FF00 (green=65280),
+                             0x0000FF (blue=255), 0xFFFF00 (yellow=16776960)
+
+    The color is automatically snapped to the nearest Ableton palette color.
+    Returns a per-clip result list so you can verify each position was found.
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_arrangement_clips_color", {
+            "track_index": track_index,
+            "positions": positions,
+            "color": color
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error setting arrangement clips color: {str(e)}")
+        return f"Error setting arrangement clips color: {str(e)}"
+
+
+@mcp.tool()
+def transpose_arrangement_clips(
+    ctx: Context,
+    track_index: int,
+    positions: List[float],
+    source_root: int = None,
+    source_scale: str = None,
+    target_root: int = None,
+    target_scale: str = None,
+    semitones: int = None
+) -> str:
+    """
+    Transpose MIDI notes on multiple Arrangement View clips in a single call —
+    entirely in Python inside Ableton. Much faster than per-clip round-trips.
+
+    Two modes:
+
+    ── Scale-aware mode (preferred) ──────────────────────────────────────────
+    Provide all four scale parameters together:
+    - source_root:  Pitch class of the source tonic  (0=C, 1=C#, 2=D … 11=B)
+    - source_scale: Scale name — e.g. "major", "minor", "dorian", "mixolydian"
+    - target_root:  Pitch class of the target tonic
+    - target_scale: Scale name of the target key
+
+    Diatonic notes are mapped degree-by-degree to the target scale.
+    Chromatic (out-of-scale) notes keep their chromatic offset, rebased from
+    the source root to the target root.
+
+    Example — C major → D major (C=0, D=2):
+      transpose_arrangement_clips(
+          track_index=10, positions=[...],
+          source_root=0, source_scale="major",
+          target_root=2, target_scale="major"
+      )
+
+    ── Chromatic mode (fallback) ──────────────────────────────────────────────
+    - semitones: Plain semitone shift applied to every note (+ = up, - = down).
+      Use when you don't need diatonic mapping.
+
+    Available scale names: major, minor, dorian, phrygian, lydian, mixolydian,
+    locrian, melodicMinor, harmonicMinor, harmonicMajor, diminished,
+    wholeTone, pentatonicMajor, pentatonicMinor, blues, chromatic … (and more).
+
+    Notes are clamped to [0, 127]. Returns a per-clip result with status and
+    the number of notes transposed.
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("transpose_arrangement_clips", {
+            "track_index":   track_index,
+            "positions":     positions,
+            "source_root":   source_root,
+            "source_scale":  source_scale,
+            "target_root":   target_root,
+            "target_scale":  target_scale,
+            "semitones":     semitones,
+        })
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error transposing arrangement clips: {str(e)}")
+        return f"Error transposing arrangement clips: {str(e)}"
 
 
 # Main execution
