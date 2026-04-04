@@ -41,6 +41,27 @@ The idea is to extend uisato’s script by adding:
 The final step will be adapting the server so it can communicate directly with the **XTouch Mini**.
 Honestly… I still don’t know where i am going. Just exploring, experimenting, and seeing how far this AI + Ableton + hardware hybrid can go.
 
+---
+
+# ✨ Features (v2.4)
+
+- Full session control (tempo, playback, time signature)
+- Track management (volume, pan, sends, mute/solo/arm, colors)
+- MIDI clip creation in Session & Arrangement View
+- Device parameter access (internal & external plugins)
+- Drum Rack & instrument loading
+- Browser search (instruments, effects, presets, VST2/VST3/AU)
+- Automation writing (Session & Arrangement)
+- Groove Pool integration
+- Key & scale reading and transformation
+- Modal transposition (major, minor, dorian, phrygian, melodic minor modes, harmonic minor modes, diminished, whole tone, pentatonics, blues…)
+- Arrangement clip batch processing
+- Precise dB curves for volume & sends
+- Auto‑shutdown when Ableton closes
+- Thread‑safe main‑thread scheduling
+- Reliability improvements and watchdog monitoring
+
+---
 
 ## 🚀 A New Hybrid Instrument: X‑Touch Mini × MCP Server × AI × Ableton Live
 
