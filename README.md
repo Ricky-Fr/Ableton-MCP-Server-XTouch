@@ -7,7 +7,7 @@ Advanced MCP Server for Ableton x XTouch with CLAUDE AI DESKTOP
 
 A new project designed to connect **Anthropic’s Claude AI** to **Ableton Live**, with the long‑term goal of integrating it seamlessly with my **Behringer XTouch Mini** control surface.  
 
-Works smoothly with Qwen3.6 for score analysis and Cline for MCP access. 
+Works smoothly with Qwen3.6 for score analysis and Cline for MCP access.
 Claude is slower, though I have yet to verify the accuracy of the analysis for both models.
 Macro tools are coming soon to optimize token usage and improve stability.
 
