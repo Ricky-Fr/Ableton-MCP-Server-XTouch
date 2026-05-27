@@ -11,6 +11,10 @@ Works smoothly with Qwen3.6 for score analysis and Cline for MCP access.
 Claude is slower, though I have yet to verify the accuracy of the analysis for both models.
 Macro tools are coming soon to optimize token usage and improve stability.
 
+2 macros availables : 
+* create_track_with_instrument
+* insert_midi_notes_arrangement
+
 The system builds on solid foundations:  
 - **uisato / MCP Server for Ableton**
 
