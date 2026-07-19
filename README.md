@@ -9,11 +9,21 @@ A new project designed to connect **Anthropic’s Claude AI** to **Ableton Live*
 
 Works smoothly with Qwen3.6 for score analysis and Cline for MCP access.
 Claude is slower, though I have yet to verify the accuracy of the analysis for both models.
-Macro tools are coming soon to optimize token usage and improve stability.
+**2 Macro tools** are ready to optimize token usage and improve stability.
 
 2 macros availables : 
 * create_track_with_instrument
 * insert_midi_notes_arrangement
+
+---
+
+I’m working on optimizing tool calls by exposing a single entry point, `search_ableton_tools(query)`, which returns the 2–3 most relevant tools along with their full schemas.  
+The actual tools (`set_track_volume`, `create_midi_clip`, etc.) remain declared on the server side, but they are only *announced* to the client when needed.
+
+MCP supports this natively through dynamic updates to `tools/list` and the `listChanged` notification — allowing the server to selectively expose tools depending on the session context.  
+This follows the principle of **progressive disclosure** for tools.
+
+---
 
 The system builds on solid foundations:  
 - **uisato / MCP Server for Ableton**
