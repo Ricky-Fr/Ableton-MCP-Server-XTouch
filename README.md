@@ -96,3 +96,26 @@ It’s the beginning of a **smart, responsive, AI‑augmented instrument** — a
 ![Demo](https://github.com/Ricky-Fr/Ableton-MCP-Server-XTouch/blob/main/demo-1.png?raw=true)
 
 ---
+
+## Related Topics
+
+- Model Context Protocol (MCP)
+- Ableton Live Integration
+- AI Music Production
+- MIDI Automation
+- MIDI Controller Integration
+- Behringer X-Touch Mini
+- Control Surface Development
+- Ableton Remote Scripts
+- AI Agents for Music Production
+- Real-time MIDI Control
+- Workflow Automation
+- Music Production Tools
+
+## Keywords
+
+MCP, Model Context Protocol, Ableton Live, Ableton MCP Server,
+AI Agents, Agentic Workflows, MIDI, MIDI Controller,
+MIDI Automation, Behringer X-Touch Mini, Control Surface,
+Remote Script, Music Production, Workflow Automation,
+LLM Integration, Real-time MIDI Control, Python
